@@ -9,7 +9,7 @@ class DoseLogSerializer(serializers.ModelSerializer):
 
 
 class MedicineSerializer(serializers.ModelSerializer):
-    logs = DoseLogSerializer(many=True, read_only=True)
+    # logs = DoseLogSerializer(many=True, read_only=True)
 
     class Meta:
         model = Medicine

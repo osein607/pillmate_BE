@@ -24,6 +24,6 @@ urlpatterns = [
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema-json'), name='redoc'),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema-json"), name="swagger-ui"),
     path('admin/', admin.site.urls),
-    path('medicine', include('pillmate.urls') )
+    path('medicine/', include('pillmate.urls') )
     
 ]
