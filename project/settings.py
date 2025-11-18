@@ -68,8 +68,8 @@ REST_FRAMEWORK = {
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -156,6 +156,13 @@ CORS_ALLOW_CREDENTIALS = True
 
 
 CORS_ALLOWED_ORIGINS = [
+    "https://pil1mate.netlify.app",
+    "http://pil1mate.netlify.app",
+    "http://localhost:5173",
+    "https://sein0327.shop",
+]
+
+CSRF_TRUSTED_ORIGINS = [
     "https://pil1mate.netlify.app",
     "http://pil1mate.netlify.app",
     "http://localhost:5173",
