@@ -158,4 +158,5 @@ CORS_ALLOW_ORIGINS = [
   'https://pil1mate.netlify.app/'
   'http://pil1mate.netlify.app/'
   'http://localhost:5173/'
+  'https://sein0327.shop'
 ]
