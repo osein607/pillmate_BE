@@ -27,6 +27,36 @@ class Medicine(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.user.username})"
+    
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None   # 새로 생성인지 체크
+        super().save(*args, **kwargs)
+
+        # ⭐ DailyDose 자동 생성/수정/삭제 처리 시작 ⭐
+
+        # 1) 기존 DailyDose 모두 불러오기
+        existing = DailyDose.objects.filter(medicine=self)
+
+        # 2) 기간(start_date ~ end_date) 기반으로 날짜 목록 생성
+        delta = (self.end_date - self.start_date).days
+        valid_dates = [self.start_date + timedelta(days=i) for i in range(delta + 1)]
+
+        # 3) 기존 DailyDose 중에서 기간에서 벗어난 날짜 삭제
+        for dose in existing:
+            if dose.date not in valid_dates:
+                dose.delete()
+
+        # 4) 기간 내 날짜는 생성 또는 업데이트
+        for d in valid_dates:
+            dose, created = DailyDose.objects.get_or_create(
+                medicine=self,
+                date=d,
+                defaults={"quantity": self.quantity}
+            )
+            if not created:
+                # 기존 DailyDose라면 quantity 업데이트
+                dose.quantity = self.quantity
+                dose.save()
 
 class DailyDose(models.Model):
     medicine = models.ForeignKey(
