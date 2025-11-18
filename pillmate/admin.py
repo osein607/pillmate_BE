@@ -11,8 +11,5 @@ class MedicineAdmin(admin.ModelAdmin):
         }),
         ("복약 기간", {
             "fields": ("start_date", "end_date")
-        }),
-        ("기타", {
-            "fields": ("is_taken_today",)
-        }),
+        })
     )
