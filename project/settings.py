@@ -154,9 +154,10 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOW_ORIGINS = [
-  'https://pil1mate.netlify.app/',
-  'http://pil1mate.netlify.app/',
-  'http://localhost:5173/',
-  'https://sein0327.shop',
+
+CORS_ALLOWED_ORIGINS = [
+    "https://pil1mate.netlify.app",
+    "http://pil1mate.netlify.app",
+    "http://localhost:5173",
+    "https://sein0327.shop",
 ]
