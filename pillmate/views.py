@@ -99,6 +99,7 @@ def arduino_confirm(request):
         return Response({'error': '해당 약을 찾을 수 없음'}, status=status.HTTP_404_NOT_FOUND)
 
 class DailyDoseViewSet(viewsets.ModelViewSet):
+    permission_classes = [AllowAny]
     queryset = DailyDose.objects.all()
     serializer_class = DailyDoseSerializer
 
