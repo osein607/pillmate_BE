@@ -43,3 +43,14 @@ class DoseLog(models.Model):
 
     def __str__(self):
         return f"{self.medicine.name} - {self.taken_at.strftime('%Y-%m-%d %H:%M')}"
+
+# 아두이노 통신 관련
+class Device(models.Model):
+    device_id = models.CharField(unique=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+class MedicineLog(models.Model):
+    device = models.ForeignKey(Device, on_delete=models.CASCADE)
+    medicine = models.CharField(max_length=200)
+    taken = models.BooleanField()
+    timestamp = models.DateTimeField()

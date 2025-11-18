@@ -155,6 +155,7 @@ CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_ORIGINS = [
-  'http://pillmates.netlify.app',
-  'https://pillmates.netlify.app',
+  'https://pil1mate.netlify.app/'
+  'http://pil1mate.netlify.app/'
+  'http://localhost:5173/'
 ]
