@@ -2,13 +2,14 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from .models import Medicine, DoseLog
-from .serializers import MedicineSerializer
+from .models import Medicine, DoseLog, DailyDose
+from .serializers import MedicineSerializer, DailyDoseSerializer
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from django.contrib.auth.models import User
 
+
 from django.utils import timezone
-from datetime import timedelta, date
+from datetime import *
 
 
 
@@ -25,23 +26,6 @@ class MedicineViewSet(viewsets.ModelViewSet):
         if user.is_anonymous:  # 로그인 안 되어 있으면 
             user = User.objects.first()  # 기본 유저로 대체 (테스트용)
         serializer.save(user=user)
-
-
-    @action(detail=True, methods=['POST'])
-    def mark_taken(self, request, pk=None):
-        """사용자가 직접 복용 완료 처리"""
-        try:
-            medicine = self.get_object()
-            if medicine.is_taken_today == True:
-                medicine.is_taken_today = False
-                medicine.save()
-                return Response({'message': '복용 취소로 표시됨'}, status=status.HTTP_200_OK)
-            medicine.is_taken_today = True
-            medicine.save()
-            DoseLog.objects.create(medicine=medicine, source='MANUAL')
-            return Response({'message': '복용 완료로 표시됨'}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
     @action(detail=False, methods=["GET"], permission_classes = [AllowAny])
     def logs(self, request):
@@ -113,3 +97,28 @@ def arduino_confirm(request):
 
     except Medicine.DoesNotExist:
         return Response({'error': '해당 약을 찾을 수 없음'}, status=status.HTTP_404_NOT_FOUND)
+
+class DailyDoseViewSet(viewsets.ModelViewSet):
+    queryset = DailyDose.objects.all()
+    serializer_class = DailyDoseSerializer
+
+    # /daily-dose/?date=2025-11-18
+    def list(self, request, *args, **kwargs):
+        date = request.query_params.get('date')
+        if not date:
+            return super().list(request, *args, **kwargs)
+
+        queryset = DailyDose.objects.filter(date=date).select_related('medicine')
+        serializer = DailyDoseSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    # PATCH /daily-dose/{id}/take/
+    @action(detail=True, methods=['patch'])
+    def take(self, request, pk=None):
+        dose = self.get_object()
+        dose.is_taken = True
+        dose.taken_at = datetime.now()
+        dose.save()
+
+        serializer = DailyDoseSerializer(dose)
+        return Response(serializer.data, status=status.HTTP_200_OK)

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Medicine, DoseLog
+from .models import Medicine, DoseLog, DailyDose
 
 
 class DoseLogSerializer(serializers.ModelSerializer):
@@ -15,3 +15,10 @@ class MedicineSerializer(serializers.ModelSerializer):
         model = Medicine
         fields = '__all__'
         read_only_fields = ['user', 'created_at', 'updated_at']
+
+class DailyDoseSerializer(serializers.ModelSerializer):
+    medicine = MedicineSerializer(read_only=True)
+
+    class Meta:
+        model = DailyDose
+        fields = "__all__"

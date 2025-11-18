@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-
+from datetime import timedelta
 
 class Medicine(models.Model):
     TYPE_CHOICES = [
@@ -22,13 +22,29 @@ class Medicine(models.Model):
     end_date = models.DateField()
     time = models.CharField(max_length=20, choices=TIME_CHOICES)
     alarm_time = models.TimeField()
-    is_taken_today = models.BooleanField(default=False)
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.name} ({self.user.username})"
+
+class DailyDose(models.Model):
+    medicine = models.ForeignKey(
+        Medicine,
+        on_delete=models.CASCADE,
+        related_name="daily_doses"
+    )
+    date = models.DateField()
+    quantity = models.PositiveIntegerField(default=1)
+    is_taken = models.BooleanField(default=False)
+    taken_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('medicine', 'date')
+        ordering = ['date']
+
+    def __str__(self):
+        return f"{self.medicine.name} - {self.date}"
 
 
 class DoseLog(models.Model):
