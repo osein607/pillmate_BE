@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 
 
 from django.utils import timezone
-from datetime import *
+from datetime import date, timedelta
 
 
 
@@ -27,57 +27,62 @@ class MedicineViewSet(viewsets.ModelViewSet):
             user = User.objects.first()  # 기본 유저로 대체 (테스트용)
         serializer.save(user=user)
         
-    @action(detail=False, methods=["GET"], permission_classes = [AllowAny])
+    @action(detail=False, methods=["GET"], permission_classes=[AllowAny])
     def logs(self, request):
         """
         이번 달 날짜별 복용 현황 반환
-        예시 응답:
         [
-          {"date": "2025-11-01", "taken": 2, "missed": 1},
-          {"date": "2025-11-02", "taken": 3, "missed": 0},
+        {"date": "2025-11-01", "taken": 2, "missed": 1},
+        {"date": "2025-11-02", "taken": 3, "missed": 0},
         ]
         """
         try:
-            # ✅ 쿼리 파라미터에서 month, user_id 받기
+            # 현재 날짜 기준
+            today = timezone.localdate()
+
+            # 쿼리 파라미터에서 month 받기
             month_str = request.query_params.get("month")
-            user_id = 1 # 임시 더미 = 1
-            if not user_id:
-                return Response({"error": "user_id 파라미터가 필요합니다. (예: ?user_id=1)"},
-                                status=status.HTTP_400_BAD_REQUEST)
+            month = int(month_str) if month_str else today.month
+            year = today.year
 
-            month = int(month_str) if month_str else timezone.localdate().month
-            year = timezone.localdate().year
-
-            # ✅ 이번 달 1일~말일 계산
+            # 월의 첫날, 마지막날 구하기
             first_day = date(year, month, 1)
-            last_day = (date(year + (month == 12), (month % 12) + 1, 1) - timedelta(days=1))
+            last_day = (date(year + (month == 12), (month % 12) + 1, 1)
+                        - timedelta(days=1))
 
-            medicines = Medicine.objects.filter(user_id=user_id)
+            # 유저 (임시로 1)
+            user_id = 1
 
-            # ✅ 날짜별 집계
+            # 유저의 모든 DailyDose 조회
+            doses = DailyDose.objects.filter(
+                medicine__user_id=user_id,
+                date__gte=first_day,
+                date__lte=last_day
+            )
+
+            # 날짜별 집계
             data = []
             current = first_day
+
             while current <= last_day:
-                # 현재 날짜에 복용 예정 약 필터링
-                todays_meds = medicines.filter(start_date__lte=current, end_date__gte=current)
-                if todays_meds.exists():
-                    taken = todays_meds.filter(is_taken_today=True).count()
-                    missed = todays_meds.filter(is_taken_today=False).count()
-                else:
-                    taken = 0
-                    missed = 0
+                day_doses = doses.filter(date=current)
+
+                taken = day_doses.filter(is_taken=True).count()
+                missed = day_doses.filter(is_taken=False).count()
 
                 data.append({
                     "date": current.strftime("%Y-%m-%d"),
                     "taken": taken,
                     "missed": missed
                 })
+
                 current += timedelta(days=1)
 
             return Response(data, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 @extend_schema(tags = ["아두이노->백엔드로 복용 완료 전송"])
