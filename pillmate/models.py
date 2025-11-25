@@ -2,6 +2,16 @@ from django.db import models
 from django.contrib.auth.models import User
 from datetime import timedelta
 
+# 보호자 이메일 정보
+class GuardianInfo(models.Model):
+    name = models.CharField(max_length=50, null=True, blank=True)
+    phone = models.CharField(max_length=50, null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
+
+    # 약 사용자 정보
+    owner_name = models.CharField(max_length=50)  
+    owner_email = models.EmailField()             
+
 class Medicine(models.Model):
     TYPE_CHOICES = [
         ('PRESCRIPTION', '처방약'),

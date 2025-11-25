@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Medicine, DoseLog, DailyDose
+from .models import Medicine, DoseLog, DailyDose, GuardianInfo
 
 
 class DoseLogSerializer(serializers.ModelSerializer):
@@ -21,4 +21,9 @@ class DailyDoseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DailyDose
+        fields = "__all__"
+
+class GuardianInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GuardianInfo
         fields = "__all__"

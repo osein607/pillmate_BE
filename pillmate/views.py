@@ -2,15 +2,14 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from .models import Medicine, DoseLog, DailyDose
-from .serializers import MedicineSerializer, DailyDoseSerializer
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from django.contrib.auth.models import User
-
-
 from django.utils import timezone
-from datetime import date, timedelta, datetime
 
+from datetime import date, timedelta, datetime
+from .models import Medicine, DoseLog, DailyDose, GuardianInfo
+from .serializers import MedicineSerializer, DailyDoseSerializer, GuardianInfoSerializer
+from .services import send_missed_dose_email
 
 
 @extend_schema(tags = ["약 등록"], summary= ["type: PRESCRIPTION | GENERAL | SUPPLEMENT", "time: BEFORE_MEAL | AFTER_MEAL"])
@@ -128,3 +127,61 @@ class DailyDoseViewSet(viewsets.ModelViewSet):
 
         serializer = DailyDoseSerializer(dose)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+##################################################################
+# 보호자 알림
+
+# /guardian/ 
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_guardian_info(request):
+    info = GuardianInfo.objects.first()   # 테스트용 하나만 존재
+    if not info:
+        return Response({"data": None})
+    return Response(GuardianInfoSerializer(info).data)
+
+# /guardian/update/
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def update_guardian_info(request):
+    info = GuardianInfo.objects.first()
+
+    if not info:
+        info = GuardianInfo.objects.create(
+            owner_name=request.data.get("owner_name", "사용자"),
+            owner_email=request.data.get("owner_email", "none@example.com")
+        )
+
+    serializer = GuardianInfoSerializer(info, data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+
+    return Response(serializer.data)
+
+def check_missed_doses():
+    permission_classes = [AllowAny]
+    now = datetime.now()
+
+    guardian = GuardianInfo.objects.first()
+    if not guardian or not guardian.email:
+        return   # 보호자 정보 없으면 skip
+
+    doses = DailyDose.objects.filter(date=now.date())
+
+    for dose in doses:
+        # 예정 시간 + 30분 지나면 미복용
+        scheduled = datetime.combine(dose.date, dose.time)
+        if now < scheduled + timedelta(minutes=30):
+            continue
+
+        # 복용 로그가 있으면 skip
+        if DoseLog.objects.filter(daily_dose=dose, taken=True).exists():
+            continue
+
+        send_missed_dose_email(
+            guardian_email=guardian.email,
+            owner_name=guardian.owner_name,
+            medicine_name=dose.medicine.name,
+            time=dose.time
+        )

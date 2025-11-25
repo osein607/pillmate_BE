@@ -169,3 +169,12 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "https://sein0327.shop",
 ]
+
+# 이메일 설정
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'user@gmail.com(위 설정에 사용한 GMail 계정)'
+EMAIL_HOST_PASSWORD = '위 설정에 사용한 GMail 비밀번호'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
