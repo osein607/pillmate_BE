@@ -7,6 +7,9 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 from datetime import date, timedelta, datetime
+from django.utils.timezone import make_aware
+from collections import defaultdict
+
 from .models import Medicine, DoseLog, DailyDose, GuardianInfo
 from .serializers import MedicineSerializer, DailyDoseSerializer, GuardianInfoSerializer
 from .services import send_missed_dose_email
@@ -160,28 +163,65 @@ def update_guardian_info(request):
     return Response(serializer.data)
 
 def check_missed_doses():
-    permission_classes = [AllowAny]
-    now = datetime.now()
+    now = timezone.now()
+    today = now.date()
+
+    # 2일 범위 (오늘 포함)
+    start_date = today - timedelta(days=2)
+    end_date = today
 
     guardian = GuardianInfo.objects.first()
     if not guardian or not guardian.email:
-        return   # 보호자 정보 없으면 skip
+        print("[MISSED_DOSE] 보호자 정보 없음 → skip")
+        return
 
-    doses = DailyDose.objects.filter(date=now.date())
+    print(f"[MISSED_DOSE] 날짜 범위: {start_date}~{end_date}")
 
+    # DailyDose에서 해당 기간의 모든 기록 가져오기
+    doses = DailyDose.objects.filter(
+        date__range=[start_date, end_date]
+    ).select_related("medicine")
+
+    # 약별로 DailyDose 리스트 묶기
+    grouped = defaultdict(list)
     for dose in doses:
-        # 예정 시간 + 30분 지나면 미복용
-        scheduled = datetime.combine(dose.date, dose.time)
-        if now < scheduled + timedelta(minutes=30):
+        grouped[dose.medicine].append(dose)
+
+    # 약별로 미복용 판단
+    for med, dose_list in grouped.items():
+        print(f"\n--- 약 체크: {med.name} ---")
+
+        # 1) 2일 중 한 번이라도 복용했으면 PASS
+        if any(d.is_taken for d in dose_list):
+            print("→ 지난 2일 중 복용 기록 있음 → skip")
             continue
 
-        # 복용 로그가 있으면 skip
-        if DoseLog.objects.filter(daily_dose=dose, taken=True).exists():
+        # 2) 복용 예정 시간도 모두 지난 상태인지 확인
+        all_passed_time = True
+        for d in dose_list:
+            scheduled = make_aware(datetime.combine(d.date, med.alarm_time))
+            if now < scheduled + timedelta(minutes=30):
+                all_passed_time = False
+                print(f"→ {d.date} 복용 예정시간이 아직 지나지 않음 → skip")
+                break
+
+        if not all_passed_time:
             continue
 
+        # 3) 최종적으로 2일 동안 복용 0회 → 이메일 1회 발송
+        print("→ 2일 동안 한 번도 복용하지 않음! 이메일 발송")
         send_missed_dose_email(
             guardian_email=guardian.email,
             owner_name=guardian.owner_name,
-            medicine_name=dose.medicine.name,
-            time=dose.time
+            medicine_name=med.name,
+            time=med.alarm_time,
         )
+
+        print("→ 이메일 전송 완료")
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def check_missed(request):
+    check_missed_doses()
+    return Response({"status": "done"})
