@@ -125,7 +125,7 @@ class DailyDoseViewSet(viewsets.ModelViewSet):
     def take(self, request, pk=None):
         dose = self.get_object()
         dose.is_taken = True
-        dose.taken_at = datetime.now()
+        dose.taken_at = timezone.now()
         dose.save()
 
         serializer = DailyDoseSerializer(dose)
