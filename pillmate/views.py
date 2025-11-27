@@ -223,6 +223,7 @@ def arduino_today_doses(request):
     for dose in doses:
         med = dose.medicine
         result.append({
+            "dose_id": dose.id, 
             "medicine_id": med.id,
             "name": med.name,
             "alarm_time": med.alarm_time.strftime("%H:%M"),
@@ -239,15 +240,32 @@ def arduino_today_doses(request):
 @permission_classes([AllowAny])  # 아두이노 접근 가능
 def arduino_confirm(request):
     """아두이노 → 백엔드로 복용 완료 전송"""
-    medicine_id = request.data.get('medicine_id')
+    dose_id = request.data.get('dose_id')
+
+    if not dose_id:
+        return Response({'error': 'dose_id가 필요합니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        medicine = Medicine.objects.get(id=medicine_id)
-        medicine.is_taken_today = True
-        medicine.save()
-        DoseLog.objects.create(medicine=medicine, source='ARDUINO')
+        dose = DailyDose.objects.get(id=dose_id)
 
-        return Response({'message': '아두이노 복용 완료 반영됨'}, status=status.HTTP_200_OK)
+        # DailyDose 업데이트
+        dose.is_taken = True
+        dose.taken_at = timezone.now()
+        dose.save()
 
-    except Medicine.DoesNotExist:
-        return Response({'error': '해당 약을 찾을 수 없음'}, status=status.HTTP_404_NOT_FOUND)
+        # DoseLog (Medicine 단위로 기록)
+        DoseLog.objects.create(
+            medicine=dose.medicine,   # 모델에 맞게 수정 완료
+            source='ARDUINO'
+        )
+
+        return Response(
+            {'message': '복용 완료 반영됨'},
+            status=status.HTTP_200_OK
+        )
+
+    except DailyDose.DoesNotExist:
+        return Response(
+            {'error': '해당 DailyDose를 찾을 수 없음'},
+            status=status.HTTP_404_NOT_FOUND
+        )
