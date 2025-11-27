@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Medicine
+from .models import Medicine, GuardianInfo
 @admin.register(Medicine)
 class MedicineAdmin(admin.ModelAdmin):
     fieldsets = (
@@ -13,3 +13,8 @@ class MedicineAdmin(admin.ModelAdmin):
             "fields": ("start_date", "end_date")
         })
     )
+
+@admin.register(GuardianInfo)
+class GuardianInfoAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "phone", "email", "owner_name", "owner_email")
+    search_fields = ("name", "phone", "email", "owner_name", "owner_email")

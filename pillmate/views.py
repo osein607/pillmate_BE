@@ -86,25 +86,6 @@ class MedicineViewSet(viewsets.ModelViewSet):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-@extend_schema(tags = ["아두이노->백엔드로 복용 완료 전송"])
-@api_view(['POST'])
-@permission_classes([AllowAny])  # 아두이노 접근 가능
-def arduino_confirm(request):
-    """아두이노 → 백엔드로 복용 완료 전송"""
-    medicine_id = request.data.get('medicine_id')
-
-    try:
-        medicine = Medicine.objects.get(id=medicine_id)
-        medicine.is_taken_today = True
-        medicine.save()
-        DoseLog.objects.create(medicine=medicine, source='ARDUINO')
-
-        return Response({'message': '아두이노 복용 완료 반영됨'}, status=status.HTTP_200_OK)
-
-    except Medicine.DoesNotExist:
-        return Response({'error': '해당 약을 찾을 수 없음'}, status=status.HTTP_404_NOT_FOUND)
-
 class DailyDoseViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
     queryset = DailyDose.objects.all()
@@ -223,5 +204,50 @@ def check_missed_doses():
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def check_missed(request):
-    check_missed_doses()
+    # check_missed_doses()
     return Response({"status": "done"})
+
+
+########################################################################################
+# 아두이노 로직
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def arduino_today_doses(request):
+    today = timezone.localdate()
+
+    # 오늘 날짜 DailyDose 가져오기
+    doses = DailyDose.objects.filter(date=today).select_related("medicine")
+
+    result = []
+    for dose in doses:
+        med = dose.medicine
+        result.append({
+            "medicine_id": med.id,
+            "name": med.name,
+            "alarm_time": med.alarm_time.strftime("%H:%M"),
+            "is_taken": dose.is_taken,
+        })
+
+    return Response({
+        "date": today,
+        "doses": result
+    })
+
+@extend_schema(tags = ["아두이노->백엔드로 복용 완료 전송"])
+@api_view(['POST'])
+@permission_classes([AllowAny])  # 아두이노 접근 가능
+def arduino_confirm(request):
+    """아두이노 → 백엔드로 복용 완료 전송"""
+    medicine_id = request.data.get('medicine_id')
+
+    try:
+        medicine = Medicine.objects.get(id=medicine_id)
+        medicine.is_taken_today = True
+        medicine.save()
+        DoseLog.objects.create(medicine=medicine, source='ARDUINO')
+
+        return Response({'message': '아두이노 복용 완료 반영됨'}, status=status.HTTP_200_OK)
+
+    except Medicine.DoesNotExist:
+        return Response({'error': '해당 약을 찾을 수 없음'}, status=status.HTTP_404_NOT_FOUND)
