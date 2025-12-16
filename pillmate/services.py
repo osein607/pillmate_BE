@@ -2,7 +2,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 
 def send_missed_dose_email(guardian_email, owner_name, medicine_name, time):
-    subject = f"[PillMate] {owner_name}님 최근 2일간 미복용 알림"
+    subject = f"[PillMate] {owner_name} 최근 2일간 미복용 알림"
 
     message = (
         f"{owner_name}이 최근 2일 동안 복용해야 했던 약 '{medicine_name}'을(를)\n"
